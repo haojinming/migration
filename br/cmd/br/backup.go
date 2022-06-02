@@ -36,6 +36,27 @@ func runBackupRawCommand(command *cobra.Command, cmdName string) error {
 	return nil
 }
 
+func runBackupTxnCommand(command *cobra.Command, cmdName string) error {
+	cfg := task.TxnBackupConfig{Config: task.Config{LogProgress: HasLogFile()}}
+	if err := cfg.ParseFromFlags(command.Flags()); err != nil {
+		command.SilenceUsage = false
+		return errors.Trace(err)
+	}
+
+	ctx := GetDefaultContext()
+	if cfg.EnableOpenTracing {
+		var store *appdash.MemoryStore
+		ctx, store = trace.TracerStartSpan(ctx)
+		defer trace.TracerFinishSpan(ctx, store)
+	}
+
+	if err := task.RunTxnBackup(ctx, gluetikv.Glue{}, cmdName, &cfg); err != nil {
+		log.Error("failed to backup txn kv", zap.Error(err))
+		return errors.Trace(err)
+	}
+	return nil
+}
+
 // NewBackupCommand return a full backup subcommand.
 func NewBackupCommand() *cobra.Command {
 	command := &cobra.Command{
@@ -54,10 +75,9 @@ func NewBackupCommand() *cobra.Command {
 		},
 	}
 	command.AddCommand(
+		newTxnBackupCommand(),
 		newRawBackupCommand(),
 	)
-
-	task.DefineBackupFlags(command.PersistentFlags())
 	return command
 }
 
@@ -74,5 +94,21 @@ func newRawBackupCommand() *cobra.Command {
 	}
 
 	task.DefineRawBackupFlags(command)
+	return command
+}
+
+// newFullBackupCommand return a full backup subcommand.
+func newTxnBackupCommand() *cobra.Command {
+	command := &cobra.Command{
+		Use:   "txn",
+		Short: "backup txn kv pairs from TiKV cluster",
+		// prevents incorrect usage like `--checksum false` instead of `--checksum=false`.
+		// the former, according to pflag parsing rules, means `--checksum=true false`.
+		Args: cobra.NoArgs,
+		RunE: func(command *cobra.Command, _ []string) error {
+			return runBackupTxnCommand(command, "Txn backup")
+		},
+	}
+	task.DefineTxnBackupFlags(command)
 	return command
 }
