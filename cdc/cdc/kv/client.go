@@ -1344,6 +1344,11 @@ func assembleRowEvent(regionID uint64, entry *cdcpb.Event_Row, enableOldValue bo
 		return model.RegionFeedEvent{}, cerror.ErrUnknownKVEventType.GenWithStackByArgs(entry.GetOpType(), entry)
 	}
 
+	log.Info("get cdc event row",
+		zap.Int("opType", int(opType)),
+		zap.ByteString("key", entry.Key),
+		zap.ByteString("value", entry.GetValue()),
+		zap.Uint64("ts", entry.CommitTs))
 	revent := model.RegionFeedEvent{
 		RegionID: regionID,
 		Val: &model.RawKVEntry{

@@ -345,8 +345,14 @@ func (k *tikvSink) runWorker(ctx context.Context, workerIdx uint32) error {
 			var err error
 			for _, batch := range batcher.Batches {
 				if batch.OpType == model.OpTypePut {
+					for i, key := range batch.Keys {
+						log.Info("put to dst cli", zap.ByteString("key", key), zap.ByteString("value", batch.Values[i]))
+					}
 					err = cli.BatchPutWithTTL(ctx, batch.Keys, batch.Values, batch.TTLs)
 				} else if batch.OpType == model.OpTypeDelete {
+					for _, key := range batch.Keys {
+						log.Info("delete to dst cli", zap.ByteString("key", key))
+					}
 					err = cli.BatchDelete(ctx, batch.Keys)
 				} else {
 					err = errors.Errorf("unexpected OpType: %v", batch.OpType)
