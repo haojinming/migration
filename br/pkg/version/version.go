@@ -30,6 +30,7 @@ var (
 func removeVAndHash(v string) string {
 	v = versionHash.ReplaceAllLiteralString(v, "")
 	v = strings.TrimSuffix(v, "-dirty")
+	v = strings.TrimPrefix(v, "br-")
 	return strings.TrimPrefix(v, "v")
 }
 
