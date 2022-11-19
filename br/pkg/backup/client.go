@@ -57,6 +57,7 @@ type ProgressUnit string
 const (
 	backupFineGrainedMaxBackoff = 80000
 	backupRetryTimes            = 5
+	getLeaderRetryTimes         = 50
 	// RangeUnit represents the progress updated counter when a range finished.
 	RangeUnit ProgressUnit = "range"
 	// RegionUnit represents the progress updated counter when a region finished.
@@ -370,8 +371,8 @@ func (bc *Client) findRegionLeader(ctx context.Context, key []byte, needEncodeKe
 	if needEncodeKey {
 		key = codec.EncodeBytes([]byte{}, key)
 	}
-	for i := 0; i < 5; i++ {
-		// better backoff.
+	for i := 0; i < getLeaderRetryTimes; i++ {
+		// TODO: better backoff.
 		region, err := bc.mgr.GetPDClient().GetRegion(ctx, key)
 		if err != nil || region == nil {
 			log.Error("find leader failed", zap.Error(err), zap.Reflect("region", region))
